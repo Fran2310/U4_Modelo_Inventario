@@ -323,8 +323,18 @@ df_visual["Valor Comercial ($)"] = (
     df_visual["Precio Venta ($)"] * df_visual["Stock Actual"]
 )
 
-# Cálculo de totales agregados
+# Cálculo de totales agregados y métricas financieras consolidadas
 total_stock = int(df_visual["Stock Actual"].sum())
+total_stock_minimo = int(df_visual["Stock Mínimo"].sum())
+total_costo_compra = float(
+    (df_visual["Costo Compra ($)"] * df_visual["Stock Actual"]).sum()
+)
+total_costo_almacenamiento = float(
+    (df_visual["Costo Almacenamiento ($/unidad)"] * df_visual["Stock Actual"]).sum()
+)
+total_margen_potencial = float(
+    (df_visual["Margen Unitario ($)"] * df_visual["Stock Actual"]).sum()
+)
 total_valor_comercial = float(df_visual["Valor Comercial ($)"].sum())
 
 # Fila consolidada de TOTALES
@@ -333,11 +343,11 @@ fila_totales = pd.DataFrame(
         {
             "Producto": "TOTALES",
             "Precio Venta ($)": None,
-            "Costo Compra ($)": None,
-            "Margen Unitario ($)": None,
-            "Costo Almacenamiento ($/unidad)": None,
+            "Costo Compra ($)": total_costo_compra,
+            "Margen Unitario ($)": total_margen_potencial,
+            "Costo Almacenamiento ($/unidad)": total_costo_almacenamiento,
             "Stock Actual": total_stock,
-            "Stock Mínimo": None,
+            "Stock Mínimo": total_stock_minimo,
             "Valor Comercial ($)": total_valor_comercial,
         }
     ]
