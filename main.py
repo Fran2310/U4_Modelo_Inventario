@@ -1,21 +1,13 @@
 """
 ==============================================================================
-SIMULADOR DE INVENTARIO PARA SUPERMERCADO
-Materia: DCM-902 - Diseño y Control de Modelos
-Módulo 1: Core de Inventario y Modelo Estático
+SISTEMA DE GESTIÓN Y SIMULACIÓN DE INVENTARIO PARA SUPERMERCADO
 ==============================================================================
 Descripción:
-    Este script constituye la base funcional y la interfaz gráfica (Dashboard)
-    del simulador de inventario. Administra el estado global del inventario
-    mediante st.session_state, proporciona operaciones manuales de inventario
-    (CRUD: entradas y salidas), evalúa un modelo estático de costos y emite
-    alertas operativas en función de umbrales de seguridad.
-
-Arquitectura por Módulos:
-    - [Módulo 1] Core de Inventario y Modelo Estático (ESTE ARCHIVO)
-    - [Módulo 2] Simulación de Eventos Discretos / Demanda Estocástica (Próximo)
-    - [Módulo 3] Modelado Continuo y Degradación / Mermas (Próximo)
-    - [Módulo 4] Optimización y Políticas de Control (s, S / EOQ) (Próximo)
+    Script principal de la aplicación interactiva para la administración y
+    control de inventarios. Administra el estado centralizado del stock
+    mediante st.session_state, permite operaciones de entrada y salida (CRUD),
+    calcula dinámicamente la estructura de costos operativos y emite alertas
+    tempranas según los umbrales mínimos de existencia.
 
 Ejecución:
     streamlit run main.py
@@ -48,8 +40,8 @@ SESSION_KEY_INVENTARIO: str = "inventario_df"
 # ==============================================================================
 def inicializar_inventario() -> None:
     """
-    Inicializa el DataFrame de inventario en st.session_state con los 4 productos
-    clave del supermercado y parámetros realistas si aún no ha sido creado.
+    Inicializa el DataFrame de inventario en st.session_state con 4 productos
+    clave del supermercado y parámetros operativos si aún no ha sido creado.
     """
     if SESSION_KEY_INVENTARIO not in st.session_state:
         datos_iniciales = {
@@ -75,12 +67,12 @@ inicializar_inventario()
 
 
 # ==============================================================================
-# MODELO ESTÁTICO: CALCULADORA PURA DE COSTOS
+# CALCULADORA PURA DE COSTOS
 # ==============================================================================
 def calcular_costos_estaticos(df: pd.DataFrame) -> Tuple[float, float, float]:
     """
-    Función pura que calcula y retorna los costos estáticos del inventario
-    basándose en el estado actual de los datos.
+    Función pura que calcula y retorna los costos del inventario basándose
+    en el estado actual de los datos.
 
     Fórmulas:
         1. Costo Total de Compra = Σ (Costo Compra ($) * Stock Actual)
@@ -93,7 +85,7 @@ def calcular_costos_estaticos(df: pd.DataFrame) -> Tuple[float, float, float]:
     Retorna:
         Tuple[float, float, float]:
             - costo_total_compra: Inversión en adquisición del stock en almacén.
-            - costo_total_almacenamiento: Gasto operativo de mantenimiento/refrigeración.
+            - costo_total_almacenamiento: Gasto operativo de mantenimiento y conservación.
             - costo_faltantes: Penalización económica por roturas de stock (Stock = 0).
     """
     # 1. Costo Total de Compra
@@ -203,38 +195,21 @@ with st.sidebar:
             reiniciar_inventario()
             st.rerun()
 
-    st.markdown("---")
-    st.info(
-        "**Módulo 1:** Core de Inventario y Modelo Estático\n\n"
-        "*Los módulos de simulación dinámica (M2) y control continuo (M3) "
-        "se integrarán en etapas posteriores.*"
-    )
-
 
 # ==============================================================================
 # INTERFAZ PRINCIPAL (DASHBOARD)
 # ==============================================================================
-st.title("🛒 Dashboard de Control y Gestión de Inventario")
-st.markdown(
-    "**Materia:** DCM-902 Diseño y Control de Modelos &nbsp;|&nbsp; "
-    "**Etapa:** Módulo 1 (Core & Modelo Estático)"
-)
-st.write(
-    "Monitoreo centralizado del nivel de existencias, cálculo analítico de costos "
-    "operativos y sistema temprano de alertas para supermercados."
-)
-
-st.markdown("---")
+st.title("🛒 Inventario Supermercado")
 
 # ------------------------------------------------------------------------------
-# 1. CÁLCULO DE COSTOS ESTÁTICOS Y TARJETAS DE MÉTRICAS (KPIs)
+# 1. CÁLCULO DE COSTOS Y TARJETAS DE MÉTRICAS (KPIs)
 # ------------------------------------------------------------------------------
 df_inventario = st.session_state[SESSION_KEY_INVENTARIO]
 costo_compra, costo_almacen, costo_faltantes = calcular_costos_estaticos(df_inventario)
 costo_total_sistema = costo_compra + costo_almacen + costo_faltantes
 num_agotados = int((df_inventario["Stock Actual"] == 0).sum())
 
-# Mostrar métricas principales usando st.columns
+# Fila principal de métricas
 kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
 
 with kpi_col1:
@@ -248,7 +223,7 @@ with kpi_col2:
     st.metric(
         label="Costo de Almacenamiento",
         value=f"${costo_almacen:,.2f}",
-        help="Costo periódico de mantenimiento físico y refrigeración (Σ Costo Almacén * Stock Actual).",
+        help="Costo periódico de mantenimiento físico y conservación (Σ Costo Almacén * Stock Actual).",
     )
 
 with kpi_col3:
@@ -264,139 +239,96 @@ with kpi_col4:
     st.metric(
         label="Costo Total del Sistema",
         value=f"${costo_total_sistema:,.2f}",
-        help="Suma integral del Modelo Estático: Compra + Almacenamiento + Penalizaciones.",
+        help="Suma total de costos operativos: Compra + Almacenamiento + Penalizaciones por faltantes.",
     )
+
+alertas_encontradas = 0
+
+for _, fila in df_inventario.iterrows():
+    producto = fila["Producto"]
+    stock_actual = int(fila["Stock Actual"])
+    stock_minimo = int(fila["Stock Mínimo"])
+
+    # Nivel 1: Rotura Crítica de Stock (Stock == 0) -> st.error
+    if stock_actual == 0:
+        alertas_encontradas += 1
+        st.error(
+            f"🛑 **STOCK AGOTADO:** **{producto}** se encuentra en 0 unidades.\n\n"
+            f"Se activa penalización de faltante (+${PENALIZACION_FALTANTE_POR_PRODUCTO:,.2f}).",
+            icon="🚨",
+        )
+
+    # Nivel 2: Advertencia de Stock Bajo (Stock < Stock Mínimo) -> st.warning
+    elif stock_actual < stock_minimo:
+        alertas_encontradas += 1
+        st.warning(
+            f"⚠️ **STOCK POR DEBAJO DEL MÍNIMO:** **{producto}** cuenta con "
+            f"**{stock_actual}** unidades (Mínimo requerido: {stock_minimo}). "
+            f"Sugerido emitir orden de reabastecimiento.",
+            icon="⚠️",
+        )
 
 st.markdown("---")
 
 # ------------------------------------------------------------------------------
-# 2. CUERPO PRINCIPAL: TABLA DE DATOS Y PANEL DE ALERTAS
+# 2. TABLA DE INVENTARIO
 # ------------------------------------------------------------------------------
-col_tabla, col_alertas = st.columns([1.6, 1.0], gap="large")
-
-with col_tabla:
-    st.subheader("📋 Estado Actual del Inventario")
-    st.caption("Valores sincronizados en tiempo real mediante `st.session_state`.")
-
-    # Visualización profesional del DataFrame con formato de columnas
-    st.dataframe(
-        df_inventario,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Producto": st.column_config.TextColumn(
-                "Producto",
-                help="Categoría clave del supermercado",
-            ),
-            "Precio Venta ($)": st.column_config.NumberColumn(
-                "Precio Venta",
-                format="$%.2f",
-                help="Precio al público consumidor",
-            ),
-            "Costo Compra ($)": st.column_config.NumberColumn(
-                "Costo Compra",
-                format="$%.2f",
-                help="Costo unitario con proveedores",
-            ),
-            "Costo Almacenamiento ($/unidad)": st.column_config.NumberColumn(
-                "Costo Almacén",
-                format="$%.2f",
-                help="Costo de almacenaje/refrigeración unitario",
-            ),
-            "Stock Actual": st.column_config.ProgressColumn(
-                "Stock Actual",
-                format="%d unid.",
-                min_value=0,
-                max_value=300,
-                help="Nivel físico actual en estantería/bodega",
-            ),
-            "Stock Mínimo": st.column_config.NumberColumn(
-                "Stock Mínimo",
-                format="%d unid.",
-                help="Umbral de seguridad (punto de reorden)",
-            ),
-        },
+st.subheader("📋 Estado Actual del Inventario")
+# Estado saludable si no existen alertas
+if alertas_encontradas == 0:
+    st.success(
+        "**ESTADO ÓPTIMO:** Todos los productos en su Stock Mínimo. "
+        "_No se detectan faltantes ni riesgos operativos._",
+        icon="✅",
     )
 
-    # Resumen rápido de totales físicos
-    unidades_totales = int(df_inventario["Stock Actual"].sum())
-    valor_venta_potencial = float(
-        (df_inventario["Precio Venta ($)"] * df_inventario["Stock Actual"]).sum()
-    )
-    st.caption(
-        f"📦 **Total unidades en almacén:** {unidades_totales:,} unidades | "
-        f"💰 **Valor comercial estimado:** ${valor_venta_potencial:,.2f}"
-    )
+# Visualización profesional del DataFrame a ancho completo
+st.dataframe(
+    df_inventario,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "Producto": st.column_config.TextColumn(
+            "Producto",
+            help="Categoría clave del supermercado",
+        ),
+        "Precio Venta ($)": st.column_config.NumberColumn(
+            "Precio Venta",
+            format="$%.2f",
+            help="Precio al público consumidor",
+        ),
+        "Costo Compra ($)": st.column_config.NumberColumn(
+            "Costo Compra",
+            format="$%.2f",
+            help="Costo unitario con proveedores",
+        ),
+        "Costo Almacenamiento ($/unidad)": st.column_config.NumberColumn(
+            "Costo Almacén",
+            format="$%.2f",
+            help="Costo de almacenaje/refrigeración unitario",
+        ),
+        "Stock Actual": st.column_config.ProgressColumn(
+            "Stock Actual",
+            format="%d unid.",
+            min_value=0,
+            max_value=300,
+            help="Nivel físico actual en estantería/bodega",
+        ),
+        "Stock Mínimo": st.column_config.NumberColumn(
+            "Stock Mínimo",
+            format="%d unid.",
+            help="Umbral de seguridad (punto de reorden)",
+        ),
+    },
+)
 
+# Resumen de totales físicos en almacén
+unidades_totales = int(df_inventario["Stock Actual"].sum())
+valor_venta_potencial = float(
+    (df_inventario["Precio Venta ($)"] * df_inventario["Stock Actual"]).sum()
+)
 
-with col_alertas:
-    st.subheader("🚨 Diagnóstico y Alertas de Stock")
-    st.caption("Monitoreo automático de umbrales críticos de inventario.")
-
-    # Sistema de alertas: Iteración sobre el DataFrame
-    alertas_encontradas = 0
-
-    for _, fila in df_inventario.iterrows():
-        producto = fila["Producto"]
-        stock_actual = int(fila["Stock Actual"])
-        stock_minimo = int(fila["Stock Mínimo"])
-
-        # Nivel 1: Rotura Crítica de Stock (Stock == 0) -> st.error
-        if stock_actual == 0:
-            alertas_encontradas += 1
-            st.error(
-                f"🛑 **STOCK AGOTADO:** **{producto}** se encuentra en 0 unidades.\n\n"
-                f"Se activa penalización de faltante (+${PENALIZACION_FALTANTE_POR_PRODUCTO:,.2f}).",
-                icon="🚨",
-            )
-
-        # Nivel 2: Advertencia de Stock Bajo (Stock < Stock Mínimo) -> st.warning
-        elif stock_actual < stock_minimo:
-            alertas_encontradas += 1
-            st.warning(
-                f"⚠️ **STOCK POR DEBAJO DEL MÍNIMO:** **{producto}** cuenta con "
-                f"**{stock_actual}** unidades (Mínimo requerido: {stock_minimo}). "
-                f"Sugerido emitir orden de reabastecimiento.",
-                icon="⚠️",
-            )
-
-    # Estado saludable si no existen alertas
-    if alertas_encontradas == 0:
-        st.success(
-            "✅ **ESTADO ÓPTIMO:** Todos los productos superan holgadamente su Stock Mínimo. "
-            "No se detectan faltantes ni riesgos operativos.",
-            icon="✨",
-        )
-
-
-# ==============================================================================
-# SECCIÓN DOCUMENTAL Y HOOKS DE INTEGRACIÓN (PARA COMPAÑEROS DE EQUIPO)
-# ==============================================================================
-with st.expander("📚 Guía de Arquitectura e Integración (Módulos 2, 3 y 4)"):
-    st.markdown(
-        """
-        ### Estructura del Proyecto DCM-902:
-        Esta aplicación sirve como base para integrar los módulos analíticos del proyecto:
-
-        ```
-        U4_Modelo_Inventario/
-        │
-        ├── main.py                  # [Módulo 1] Core, UI y Modelo Estático (Presente)
-        ├── simulacion_discreta.py   # [Módulo 2] Simulación de demanda por eventos (Monte Carlo)
-        ├── modelo_continuo.py       # [Módulo 3] Ecuaciones diferenciales y perecederos
-        ├── control_optimo.py        # [Módulo 4] Política de inventarios óptima (s, S / EOQ)
-        └── requirements.txt         # Dependencias del entorno virtual
-        ```
-
-        #### Puntos de Inyección para los siguientes módulos:
-        1. **Módulo 2 (Simulación Discreta):**
-           - Podrá recibir `st.session_state['inventario_df']` como condición inicial $t_0$.
-           - Iterará la demanda diaria mediante variables aleatorias (ej. Poisson / Normal).
-        2. **Módulo 3 (Modelos Continuos):**
-           - Añadirá dinámicas de degradación continua sobre productos perecederos (ej. *Carne* y *Lácteos*).
-           - Aplicará integradores numéricos (`scipy.integrate.solve_ivp` o Euler).
-        3. **Módulo 4 (Políticas de Control):**
-           - Recibirá las salidas simuladas para calcular los parámetros óptimos $(s, S)$
-             minimizando la función de costo estático definida en `calcular_costos_estaticos()`.
-        """
-    )
+st.caption(
+    f"📦 **Total unidades en almacén:** {unidades_totales:,} unidades | "
+    f"💰 **Valor comercial estimado:** ${valor_venta_potencial:,.2f}"
+)
