@@ -36,14 +36,15 @@ U4_Modelo_Inventario/
 * **Archivo:** `main.py`
 * **Responsabilidades:**
   - **Gestión de Estado Centralizada:** Persistencia del inventario durante la sesión interactiva con `st.session_state`.
-  - **Catálogo Base de Productos:** Monitoreo de 4 categorías clave (`Carne`, `Lácteos`, `Granos`, `Higiene`) con atributos económicos (`Precio Venta`, `Costo Compra`, `Costo Almacenamiento`, `Stock Actual`, `Stock Mínimo`).
+  - **Catálogo Base de Productos:** Monitoreo de 4 categorías clave (`Carne`, `Lácteos`, `Granos`, `Higiene`) con atributos económicos (`Precio Venta`, `Costo Compra`, `Margen Unitario`, `Costo Almacenamiento`, `Stock Actual`, `Stock Mínimo`).
   - **Operaciones CRUD:** Entradas (abastecimiento) y salidas (despacho/ventas) manuales desde la barra lateral con control estricto de no-negatividad.
-  - **Modelo Estático de Costos:** Evaluación instantánea de los costos del sistema:
-    $$\text{Costo Total} = \text{Costo de Compra} + \text{Costo de Almacenamiento} + \text{Costo de Faltantes}$$
+  - **Modelo Estático de Costos (Lucro Cesante):** Evaluación instantánea de los costos del sistema:
+    $$\text{Costo Total} = \text{Costo de Compra} + \text{Costo de Almacenamiento} + \text{Lucro Cesante}$$
     - **Costo de Compra:** $\sum (\text{Costo Compra} \times \text{Stock Actual})$
     - **Costo de Almacenamiento:** $\sum (\text{Costo Almacenamiento} \times \text{Stock Actual})$
-    - **Penalización por Faltantes:** Multa económica fija ($\$150.00$) por cada producto con existencia en $0$.
-  - **Dashboard de Monitoreo:** Métricas ejecutivas (KPIs), panel superior de alertas tempranas y tabla interactiva a ancho completo.
+    - **Lucro Cesante (Faltantes):** Penalización dinámica equivalente al margen de ganancia perdido por demanda insatisfecha estimada sobre el stock mínimo:
+      $$\text{Lucro Cesante} = \sum_{\text{Stock}=0} (\text{Margen Unitario} \times \text{Stock Mínimo})$$
+  - **Dashboard de Monitoreo:** Métricas ejecutivas (KPIs), panel superior de alertas tempranas y tabla interactiva a ancho completo con fila consolidada de **TOTALES** (Stock total y Valor comercial agregado).
 
 ---
 
@@ -87,12 +88,13 @@ import streamlit as st
 df_actual = st.session_state["inventario_df"]
 ```
 
-**Estructura de Columnas:**
+**Estructura de Columnas en `st.session_state`:**
 | Columna | Tipo de Dato | Descripción |
 | :--- | :---: | :--- |
 | `Producto` | `str` | Nombre o categoría del artículo |
 | `Precio Venta ($)` | `float` | Precio unitario al público |
 | `Costo Compra ($)` | `float` | Costo unitario de adquisición |
+| `Margen Unitario ($)` | `float` | Margen de ganancia (`Precio Venta - Costo Compra`) |
 | `Costo Almacenamiento ($/unidad)` | `float` | Tarifa de mantenimiento/refrigeración |
 | `Stock Actual` | `int` | Existencia física disponible |
 | `Stock Mínimo` | `int` | Punto de seguridad o reorden base |

@@ -6,8 +6,9 @@ Descripción:
     Script principal de la aplicación interactiva para la administración y
     control de inventarios. Administra el estado centralizado del stock
     mediante st.session_state, permite operaciones de entrada y salida (CRUD),
-    calcula dinámicamente la estructura de costos operativos y emite alertas
-    tempranas según los umbrales mínimos de existencia.
+    calcula dinámicamente la estructura de costos operativos evaluando el lucro
+    cesante por roturas de stock, y emite alertas tempranas según los umbrales
+    mínimos de existencia.
 
 Ejecución:
     streamlit run main.py
@@ -28,9 +29,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Constante de penalización ficticia por rotura de stock ($ por producto agotado)
-PENALIZACION_FALTANTE_POR_PRODUCTO: float = 150.0
-
 # Clave utilizada para almacenar el DataFrame en st.session_state
 SESSION_KEY_INVENTARIO: str = "inventario_df"
 
@@ -42,6 +40,7 @@ def inicializar_inventario() -> None:
     """
     Inicializa el DataFrame de inventario en st.session_state con 4 productos
     clave del supermercado y parámetros operativos si aún no ha sido creado.
+    Calcula dinámicamente el Margen Unitario ($) = Precio Venta ($) - Costo Compra ($).
     """
     if SESSION_KEY_INVENTARIO not in st.session_state:
         datos_iniciales = {
@@ -52,7 +51,27 @@ def inicializar_inventario() -> None:
             "Stock Actual": [45, 85, 200, 110],
             "Stock Mínimo": [20, 30, 50, 35],
         }
-        st.session_state[SESSION_KEY_INVENTARIO] = pd.DataFrame(datos_iniciales)
+        df = pd.DataFrame(datos_iniciales)
+        # Cálculo dinámico del margen unitario de ganancia
+        df["Margen Unitario ($)"] = df["Precio Venta ($)"] - df["Costo Compra ($)"]
+        
+        # Orden preferente de columnas para claridad financiera
+        columnas_ordenadas = [
+            "Producto",
+            "Precio Venta ($)",
+            "Costo Compra ($)",
+            "Margen Unitario ($)",
+            "Costo Almacenamiento ($/unidad)",
+            "Stock Actual",
+            "Stock Mínimo",
+        ]
+        st.session_state[SESSION_KEY_INVENTARIO] = df[columnas_ordenadas]
+    else:
+        # Mecanismo de seguridad: garantizar cálculo de margen si se proviene de sesión previa
+        df = st.session_state[SESSION_KEY_INVENTARIO]
+        if "Margen Unitario ($)" not in df.columns:
+            df["Margen Unitario ($)"] = df["Precio Venta ($)"] - df["Costo Compra ($)"]
+            st.session_state[SESSION_KEY_INVENTARIO] = df
 
 
 def reiniciar_inventario() -> None:
@@ -67,7 +86,7 @@ inicializar_inventario()
 
 
 # ==============================================================================
-# CALCULADORA PURA DE COSTOS
+# CALCULADORA PURA DE COSTOS (MODELO FINANCIERO CON LUCRO CESANTE)
 # ==============================================================================
 def calcular_costos_estaticos(df: pd.DataFrame) -> Tuple[float, float, float]:
     """
@@ -77,7 +96,8 @@ def calcular_costos_estaticos(df: pd.DataFrame) -> Tuple[float, float, float]:
     Fórmulas:
         1. Costo Total de Compra = Σ (Costo Compra ($) * Stock Actual)
         2. Costo Total de Almacenamiento = Σ (Costo Almacenamiento ($/unidad) * Stock Actual)
-        3. Costo de Faltantes/Pérdidas = Número de productos con Stock == 0 * PENALIZACION
+        3. Costo de Faltantes/Pérdidas (Lucro Cesante) = 
+           Σ (Margen Unitario ($) * Stock Mínimo) para productos con Stock Actual == 0.
 
     Parámetros:
         df (pd.DataFrame): DataFrame con el estado actual del inventario.
@@ -86,7 +106,7 @@ def calcular_costos_estaticos(df: pd.DataFrame) -> Tuple[float, float, float]:
         Tuple[float, float, float]:
             - costo_total_compra: Inversión en adquisición del stock en almacén.
             - costo_total_almacenamiento: Gasto operativo de mantenimiento y conservación.
-            - costo_faltantes: Penalización económica por roturas de stock (Stock = 0).
+            - costo_faltantes: Pérdida económica total por Lucro Cesante (demanda insatisfecha).
     """
     # 1. Costo Total de Compra
     costo_total_compra = float((df["Costo Compra ($)"] * df["Stock Actual"]).sum())
@@ -96,9 +116,14 @@ def calcular_costos_estaticos(df: pd.DataFrame) -> Tuple[float, float, float]:
         (df["Costo Almacenamiento ($/unidad)"] * df["Stock Actual"]).sum()
     )
 
-    # 3. Costo de Faltantes/Pérdidas (Penalización por rotura de stock cuando Stock Actual == 0)
-    productos_agotados = int((df["Stock Actual"] == 0).sum())
-    costo_faltantes = float(productos_agotados * PENALIZACION_FALTANTE_POR_PRODUCTO)
+    # 3. Costo de Faltantes / Lucro Cesante:
+    # Penalización por demanda insatisfecha = Margen Unitario ($) * Stock Mínimo
+    productos_agotados = df["Stock Actual"] == 0
+    lucro_cesante_serie = (
+        df.loc[productos_agotados, "Margen Unitario ($)"]
+        * df.loc[productos_agotados, "Stock Mínimo"]
+    )
+    costo_faltantes = float(lucro_cesante_serie.sum())
 
     return costo_total_compra, costo_total_almacenamiento, costo_faltantes
 
@@ -200,7 +225,7 @@ with st.sidebar:
 # INTERFAZ PRINCIPAL (DASHBOARD)
 # ==============================================================================
 st.title("🛒 Inventario Supermercado")
-
+st.subheader("Resumen", icon="📝")
 # ------------------------------------------------------------------------------
 # 1. CÁLCULO DE COSTOS Y TARJETAS DE MÉTRICAS (KPIs)
 # ------------------------------------------------------------------------------
@@ -228,33 +253,40 @@ with kpi_col2:
 
 with kpi_col3:
     st.metric(
-        label="Costo de Faltantes / Pérdidas",
+        label="Lucro Cesante (Faltantes)",
         value=f"${costo_faltantes:,.2f}",
         delta=f"{num_agotados} agotado(s)" if num_agotados > 0 else "0 agotados",
         delta_color="inverse" if num_agotados > 0 else "normal",
-        help=f"Penalización de ${PENALIZACION_FALTANTE_POR_PRODUCTO:,.2f} aplicada por cada producto sin stock.",
+        help="Pérdida económica por demanda insatisfecha (Σ Margen Unitario * Stock Mínimo) en productos con stock en 0.",
     )
 
 with kpi_col4:
     st.metric(
         label="Costo Total del Sistema",
         value=f"${costo_total_sistema:,.2f}",
-        help="Suma total de costos operativos: Compra + Almacenamiento + Penalizaciones por faltantes.",
+        help="Suma total de costos operativos: Compra + Almacenamiento + Lucro Cesante por faltantes.",
     )
 
+# ------------------------------------------------------------------------------
+# 2. DIAGNÓSTICO Y ALERTAS DE STOCK (BLOQUE SUPERIOR)
+# ------------------------------------------------------------------------------
+st.subheader("🚨 Diagnóstico y Alertas de Stock")
 alertas_encontradas = 0
 
 for _, fila in df_inventario.iterrows():
     producto = fila["Producto"]
     stock_actual = int(fila["Stock Actual"])
     stock_minimo = int(fila["Stock Mínimo"])
+    margen_unitario = float(fila["Margen Unitario ($)"])
 
-    # Nivel 1: Rotura Crítica de Stock (Stock == 0) -> st.error
+    # Nivel 1: Rotura Crítica de Stock (Stock == 0) -> Lucro Cesante
     if stock_actual == 0:
         alertas_encontradas += 1
+        lucro_cesante_prod = margen_unitario * stock_minimo
         st.error(
             f"🛑 **STOCK AGOTADO:** **{producto}** se encuentra en 0 unidades.\n\n"
-            f"Se activa penalización de faltante (+${PENALIZACION_FALTANTE_POR_PRODUCTO:,.2f}).",
+            f"Se activa penalización por **Lucro Cesante:** **${lucro_cesante_prod:,.2f}** "
+            f"(Pérdida estimada de {stock_minimo} unidades de demanda a ${margen_unitario:,.2f} de margen unitario).",
             icon="🚨",
         )
 
@@ -268,67 +300,109 @@ for _, fila in df_inventario.iterrows():
             icon="⚠️",
         )
 
-st.markdown("---")
-
-# ------------------------------------------------------------------------------
-# 2. TABLA DE INVENTARIO
-# ------------------------------------------------------------------------------
-st.subheader("📋 Estado Actual del Inventario")
 # Estado saludable si no existen alertas
 if alertas_encontradas == 0:
     st.success(
-        "**ESTADO ÓPTIMO:** Todos los productos en su Stock Mínimo. "
+        "**ESTADO ÓPTIMO:** Todos los productos se encuentran en o por encima de su Stock Mínimo. "
         "_No se detectan faltantes ni riesgos operativos._",
         icon="✅",
     )
 
-# Visualización profesional del DataFrame a ancho completo
+st.markdown("---")
+
+# ------------------------------------------------------------------------------
+# 3. TABLA DE INVENTARIO (CON FILA DINÁMICA DE TOTALES)
+# ------------------------------------------------------------------------------
+st.subheader("📋 Estado Actual del Inventario")
+
+# Generación al vuelo del DataFrame visual (para no contaminar el estado de sesión ni el CRUD)
+df_visual = df_inventario.copy()
+
+# Columna analítica: Valor Comercial ($) = Precio Venta ($) * Stock Actual
+df_visual["Valor Comercial ($)"] = (
+    df_visual["Precio Venta ($)"] * df_visual["Stock Actual"]
+)
+
+# Cálculo de totales agregados
+total_stock = int(df_visual["Stock Actual"].sum())
+total_valor_comercial = float(df_visual["Valor Comercial ($)"].sum())
+
+# Fila consolidada de TOTALES
+fila_totales = pd.DataFrame(
+    [
+        {
+            "Producto": "TOTALES",
+            "Precio Venta ($)": None,
+            "Costo Compra ($)": None,
+            "Margen Unitario ($)": None,
+            "Costo Almacenamiento ($/unidad)": None,
+            "Stock Actual": total_stock,
+            "Stock Mínimo": None,
+            "Valor Comercial ($)": total_valor_comercial,
+        }
+    ]
+)
+
+df_visual = pd.concat([df_visual, fila_totales], ignore_index=True)
+
+# Estilización con Pandas Styler: fila de TOTALES en negrita con fondo tenue
+df_styled = df_visual.style.apply(
+    lambda row: [
+        "font-weight: bold; background-color: rgba(128, 128, 128, 0.1);"
+        if row["Producto"] == "TOTALES"
+        else ""
+        for _ in row
+    ],
+    axis=1,
+)
+
+# Configuración visual de columnas
+column_config = {
+    "Producto": st.column_config.TextColumn(
+        "Producto",
+        help="Categoría clave del supermercado o fila de consolidado",
+    ),
+    "Precio Venta ($)": st.column_config.NumberColumn(
+        "Precio Venta",
+        format="$%.2f",
+        help="Precio al público consumidor",
+    ),
+    "Costo Compra ($)": st.column_config.NumberColumn(
+        "Costo Compra",
+        format="$%.2f",
+        help="Costo unitario con proveedores",
+    ),
+    "Margen Unitario ($)": st.column_config.NumberColumn(
+        "Margen Unitario",
+        format="$%.2f",
+        help="Margen de ganancia unitario (Precio Venta - Costo Compra)",
+    ),
+    "Costo Almacenamiento ($/unidad)": st.column_config.NumberColumn(
+        "Costo Almacén",
+        format="$%.2f",
+        help="Costo de almacenaje/refrigeración unitario",
+    ),
+    "Stock Actual": st.column_config.NumberColumn(
+        "Stock Actual",
+        format="%d unid.",
+        help="Nivel físico actual en estantería/bodega",
+    ),
+    "Stock Mínimo": st.column_config.NumberColumn(
+        "Stock Mínimo",
+        format="%d unid.",
+        help="Umbral de seguridad (punto de reorden)",
+    ),
+    "Valor Comercial ($)": st.column_config.NumberColumn(
+        "Valor Comercial",
+        format="$%.2f",
+        help="Valor comercial del inventario (Precio Venta * Stock Actual)",
+    ),
+}
+
+# Renderizado de la tabla a ancho completo
 st.dataframe(
-    df_inventario,
+    df_styled,
     use_container_width=True,
     hide_index=True,
-    column_config={
-        "Producto": st.column_config.TextColumn(
-            "Producto",
-            help="Categoría clave del supermercado",
-        ),
-        "Precio Venta ($)": st.column_config.NumberColumn(
-            "Precio Venta",
-            format="$%.2f",
-            help="Precio al público consumidor",
-        ),
-        "Costo Compra ($)": st.column_config.NumberColumn(
-            "Costo Compra",
-            format="$%.2f",
-            help="Costo unitario con proveedores",
-        ),
-        "Costo Almacenamiento ($/unidad)": st.column_config.NumberColumn(
-            "Costo Almacén",
-            format="$%.2f",
-            help="Costo de almacenaje/refrigeración unitario",
-        ),
-        "Stock Actual": st.column_config.ProgressColumn(
-            "Stock Actual",
-            format="%d unid.",
-            min_value=0,
-            max_value=300,
-            help="Nivel físico actual en estantería/bodega",
-        ),
-        "Stock Mínimo": st.column_config.NumberColumn(
-            "Stock Mínimo",
-            format="%d unid.",
-            help="Umbral de seguridad (punto de reorden)",
-        ),
-    },
-)
-
-# Resumen de totales físicos en almacén
-unidades_totales = int(df_inventario["Stock Actual"].sum())
-valor_venta_potencial = float(
-    (df_inventario["Precio Venta ($)"] * df_inventario["Stock Actual"]).sum()
-)
-
-st.caption(
-    f"📦 **Total unidades en almacén:** {unidades_totales:,} unidades | "
-    f"💰 **Valor comercial estimado:** ${valor_venta_potencial:,.2f}"
+    column_config=column_config,
 )
