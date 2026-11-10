@@ -51,9 +51,84 @@ U4_Modelo_Inventario/
 ### ⏳ Módulo 2: Simulación de Eventos Discretos y Demanda Estocástica (Próximo)
 * **Archivo objetivo:** `simulacion_discreta.py`
 * **Alcance:**
-  - Generación de demanda diaria de clientes utilizando distribuciones probabilísticas (ej. **Poisson** para afluencia y **Normal** truncada para volúmenes de compra).
-  - Simulación de horizonte temporal discreto ($T = 30$ o $60$ días) mediante pasos de tiempo $\Delta t = 1 \text{ día}$.
-  - Registro de series temporales de existencias, ventas perdidas por agotamiento y costos acumulados día a día.
+  📘 Explicación del Módulo 2 — Simulación Discreta y Políticas de Reposición
+El Módulo 2 es el corazón analítico del sistema: toma el inventario que gestionas manualmente (Módulo 1) y lo proyecta 30 días en el futuro simulando cómo evolucionaría bajo demanda incierta y distintas reglas de reposición.
+
+🎯 ¿Qué hace exactamente?
+Simula día a día lo que ocurre en el almacén durante 30 jornadas, respondiendo preguntas como:
+
+¿Cuántas unidades tendré mañana si la demanda es alta?
+
+¿Cuándo debo hacer un pedido y cuánto?
+
+¿Qué pasa si la temperatura sube y daña la mercancía?
+
+¿Qué política de reposición me cuesta menos dinero?
+
+⚙️ Los 5 subprocesos que ocurren en cada día simulado
+Dentro del bucle for dia in range(1, dias+1) de la función simular(), en cada iteración se ejecuta esta secuencia:
+
+#	Subproceso	Qué simula
+1	Llegada de pedidos	Si un pedido hecho días atrás ya cumplió su lead time, entra al stock físico.
+2	Demanda aleatoria	Se genera la demanda del día con una distribución normal N(μ, σ) → representa clientes que llegan de forma impredecible.
+3	Ventas y faltantes	Si hay stock suficiente se vende todo; si no, lo no satisfecho se registra como faltante (venta perdida).
+4	Temperatura + merma	Se calcula T(t) = base + A·sin(2π·t/30) y, si supera el umbral, se descuenta un % del stock como merma (modelo híbrido).
+5	Decisión de pedido	Se evalúa la política activa para decidir si se hace un pedido hoy y cuánto.
+🔄 Las dos políticas de reposición implementadas
+📦 Política (s, Q) — Revisión Continua
+Regla: "Si la posición de inventario cae por debajo de s, pido Q unidades fijas."
+
+Cómo se comporta: pedidos frecuentes y de tamaño constante. Mantiene el stock más "estable".
+
+Ejemplo: si s=20 y Q=50, cada vez que el inventario toque 20, se piden 50.
+
+📦 Política (R, S) — Revisión Periódica
+Regla: "Cada R días reviso y pido lo necesario para llegar a S."
+
+Cómo se comporta: pedidos agrupados (menos frecuentes) pero de tamaño variable. Reduce costos de compra pero puede generar más faltantes si R es grande.
+
+Ejemplo: si R=5 y S=150, cada 5 días se pide lo que falte para tener 150 unidades.
+
+🔑 Clave técnica: posición de inventario
+Ambas políticas usan posicion = stock + pedidos_en_tránsito (no solo el stock físico). Esto evita pedidos duplicados mientras el pedido anterior aún está en camino por el lead time.
+
+🌡️ Los dos modelos especiales que se combinan
+Modelo dinámico continuo — Temperatura
+text
+T(t) = 20 + 8·sin(2π·t/30)
+Simula un ciclo térmico (día caluroso → fresco → caluroso) sin saltos bruscos, como ocurre en un almacén real. Se grafica superpuesto con el stock para ver el efecto.
+
+Modelo híbrido — Merma por calor
+Cuando T(t) > umbral (26°C), el sistema pierde un porcentaje del stock disponible:
+
+text
+if T > umbral: merma = stock × tasa (ej. 3%)
+Esto acopla la variable continua (temperatura) con el inventario discreto, cumpliendo el requisito del enunciado.
+
+💰 ¿Qué obtiene el usuario al final?
+Tabla diaria de 30 filas con: demanda, ventas, faltantes, temperatura, merma, pedido, stock final.
+
+Gráfico comparativo de stock entre política (s,Q) y (R,S), con línea de stock mínimo y quiebre.
+
+Gráfico de temperatura mostrando cuándo se activó la merma.
+
+Tabla de costos desglosada por política:
+
+Costo de Compra = Σ pedidos × costo unitario
+
+Costo de Almacenamiento = stock promedio × costo diario × días
+
+Lucro Cesante = Σ faltantes × margen unitario
+
+Pérdida por Merma = Σ mermas × costo unitario
+
+Recomendación automática: la política con menor costo total.
+
+🔬 Submódulo de Optimización- Barre automáticamente combinaciones de (s, Q) y (R, S) (varias decenas) y ordena los resultados por costo total, identificando la configuración óptima para ese producto y contexto.
+
+📊 En una frase- El Módulo 2 convierte el inventario estático en una película de 30 días, donde la demanda, la temperatura y la política de pedidos interactúan para producir costos, faltantes y mermas medibles — permitiéndote decidir con evidencia qué política conviene al negocio.
+
+
 
 ---
 
