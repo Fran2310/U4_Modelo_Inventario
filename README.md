@@ -56,14 +56,10 @@ El Módulo 2 es el corazón analítico del sistema: toma el inventario que gesti
 
 🎯 ¿Qué hace exactamente?
 Simula día a día lo que ocurre en el almacén durante 30 jornadas, respondiendo preguntas como:
-
-¿Cuántas unidades tendré mañana si la demanda es alta?
-
-¿Cuándo debo hacer un pedido y cuánto?
-
-¿Qué pasa si la temperatura sube y daña la mercancía?
-
-¿Qué política de reposición me cuesta menos dinero?
+- **¿Cuántas unidades tendré mañana si la demanda es alta?
+- **¿Cuándo debo hacer un pedido y cuánto?
+- **¿Qué pasa si la temperatura sube y daña la mercancía?
+- **¿Qué política de reposición me cuesta menos dinero?
 
 ⚙️ Los 5 subprocesos que ocurren en cada día simulado
 Dentro del bucle for dia in range(1, dias+1) de la función simular(), en cada iteración se ejecuta esta secuencia:
