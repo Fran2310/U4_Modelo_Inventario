@@ -65,10 +65,15 @@ Simula día a día lo que ocurre en el almacén durante 30 jornadas, respondiend
 Dentro del bucle for dia in range(1, dias+1) de la función simular(), en cada iteración se ejecuta esta secuencia:
 
 **#	Subproceso	Qué simula**
+
 **- 1	Llegada de pedidos**:Si un pedido hecho días atrás ya cumplió su lead time, entra al stock físico.
+
 **- 2	Demanda aleatoria**:Se genera la demanda del día con una distribución normal N(μ, σ) → representa clientes que llegan de forma impredecible.
+
 **- 3	Ventas y faltantes**:Si hay stock suficiente se vende todo; si no, lo no satisfecho se registra como faltante (venta perdida).
+
 **- 4	Temperatura + merma**:Se calcula T(t) = base + A·sin(2π·t/30) y, si supera el umbral, se descuenta un % del stock como merma (modelo híbrido).
+
 **- 5	Decisión de pedido**:Se evalúa la política activa para decidir si se hace un pedido hoy y cuánto.
 
 **🔄 Las dos políticas de reposición implementadas**
