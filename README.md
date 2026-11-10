@@ -56,26 +56,22 @@ El Módulo 2 es el corazón analítico del sistema: toma el inventario que gesti
 
 🎯 ¿Qué hace exactamente?
 Simula día a día lo que ocurre en el almacén durante 30 jornadas, respondiendo preguntas como:
-- **¿Cuántas unidades tendré mañana si la demanda es alta?
-- **¿Cuándo debo hacer un pedido y cuánto?
-- **¿Qué pasa si la temperatura sube y daña la mercancía?
-- **¿Qué política de reposición me cuesta menos dinero?
+- **¿Cuántas unidades tendré mañana si la demanda es alta?**
+- **¿Cuándo debo hacer un pedido y cuánto?**
+- **¿Qué pasa si la temperatura sube y daña la mercancía?**
+- **¿Qué política de reposición me cuesta menos dinero?**
 
 ⚙️ Los 5 subprocesos que ocurren en cada día simulado
 Dentro del bucle for dia in range(1, dias+1) de la función simular(), en cada iteración se ejecuta esta secuencia:
 
-#	Subproceso	Qué simula
-1	Llegada de pedidos	Si un pedido hecho días atrás ya cumplió su lead time, entra al stock físico.
+**#	Subproceso	Qué simula**
+**- 1	Llegada de pedidos**:Si un pedido hecho días atrás ya cumplió su lead time, entra al stock físico.
+**- 2	Demanda aleatoria**:Se genera la demanda del día con una distribución normal N(μ, σ) → representa clientes que llegan de forma impredecible.
+**- 3	Ventas y faltantes**:Si hay stock suficiente se vende todo; si no, lo no satisfecho se registra como faltante (venta perdida).
+**- 4	Temperatura + merma**:Se calcula T(t) = base + A·sin(2π·t/30) y, si supera el umbral, se descuenta un % del stock como merma (modelo híbrido).
+**- 5	Decisión de pedido**:Se evalúa la política activa para decidir si se hace un pedido hoy y cuánto.
 
-2	Demanda aleatoria	Se genera la demanda del día con una distribución normal N(μ, σ) → representa clientes que llegan de forma impredecible.
-
-3	Ventas y faltantes	Si hay stock suficiente se vende todo; si no, lo no satisfecho se registra como faltante (venta perdida).
-
-4	Temperatura + merma	Se calcula T(t) = base + A·sin(2π·t/30) y, si supera el umbral, se descuenta un % del stock como merma (modelo híbrido).
-
-5	Decisión de pedido	Se evalúa la política activa para decidir si se hace un pedido hoy y cuánto.
-
-🔄 Las dos políticas de reposición implementadas
+**🔄 Las dos políticas de reposición implementadas**
 📦 Política (s, Q) — Revisión Continua
 Regla: "Si la posición de inventario cae por debajo de s, pido Q unidades fijas."
 
@@ -90,23 +86,23 @@ Cómo se comporta: pedidos agrupados (menos frecuentes) pero de tamaño variable
 
 Ejemplo: si R=5 y S=150, cada 5 días se pide lo que falte para tener 150 unidades.
 
-🔑 Clave técnica: posición de inventario
+- 🔑 Clave técnica: posición de inventario
 Ambas políticas usan posicion = stock + pedidos_en_tránsito (no solo el stock físico). Esto evita pedidos duplicados mientras el pedido anterior aún está en camino por el lead time.
 
-🌡️ Los dos modelos especiales que se combinan
-Modelo dinámico continuo — Temperatura
+- 🌡️ Los dos modelos especiales que se combinan
+**Modelo dinámico continuo — Temperatura**
 text
 T(t) = 20 + 8·sin(2π·t/30)
 Simula un ciclo térmico (día caluroso → fresco → caluroso) sin saltos bruscos, como ocurre en un almacén real. Se grafica superpuesto con el stock para ver el efecto.
 
-Modelo híbrido — Merma por calor
+**Modelo híbrido — Merma por calor**
 Cuando T(t) > umbral (26°C), el sistema pierde un porcentaje del stock disponible:
 
-text
+**text**
 if T > umbral: merma = stock × tasa (ej. 3%)
 Esto acopla la variable continua (temperatura) con el inventario discreto, cumpliendo el requisito del enunciado.
 
-💰 ¿Qué obtiene el usuario al final?
+**💰 ¿Qué obtiene el usuario al final?**
 Tabla diaria de 30 filas con: demanda, ventas, faltantes, temperatura, merma, pedido, stock final.
 
 Gráfico comparativo de stock entre política (s,Q) y (R,S), con línea de stock mínimo y quiebre.
@@ -125,9 +121,9 @@ Pérdida por Merma = Σ mermas × costo unitario
 
 Recomendación automática: la política con menor costo total.
 
-🔬 Submódulo de Optimización- Barre automáticamente combinaciones de (s, Q) y (R, S) (varias decenas) y ordena los resultados por costo total, identificando la configuración óptima para ese producto y contexto.
+- **🔬 Submódulo de Optimización** Barre automáticamente combinaciones de (s, Q) y (R, S) (varias decenas) y ordena los resultados por costo total, identificando la configuración óptima para ese producto y contexto.
 
-📊 En una frase- El Módulo 2 convierte el inventario estático en una película de 30 días, donde la demanda, la temperatura y la política de pedidos interactúan para producir costos, faltantes y mermas medibles — permitiéndote decidir con evidencia qué política conviene al negocio.
+**📊 En una frase** El Módulo 2 convierte el inventario estático en una película de 30 días, donde la demanda, la temperatura y la política de pedidos interactúan para producir costos, faltantes y mermas medibles — permitiéndote decidir con evidencia qué política conviene al negocio.
 
 
 
