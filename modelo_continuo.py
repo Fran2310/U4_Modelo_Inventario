@@ -52,7 +52,7 @@ def tasa_degradacion(t, S, lambda_base, temp_amb, props):
 # 3. MÉTODOS NUMÉRICOS DE APROXIMACIÓN
 # ==========================================
 def resolver_euler(s0, lambda_base, temp_amb, props, t_max=30, n_pasos=300):
-    """Método de Euler Explícito (Primer orden)."""
+    """Método de Euler Explícito (Primer orden) con paso configurable."""
     t = np.linspace(0, t_max, n_pasos)
     dt = t[1] - t[0]
     y = np.zeros(n_pasos)
@@ -64,7 +64,7 @@ def resolver_euler(s0, lambda_base, temp_amb, props, t_max=30, n_pasos=300):
     return t, y
 
 def resolver_rk4(s0, lambda_base, temp_amb, props, t_max=30, n_pasos=300):
-    """Método clásico de Runge-Kutta de 4to Orden (RK4)."""
+    """Método clásico de Runge-Kutta de 4to Orden (RK4) con paso configurable."""
     t = np.linspace(0, t_max, n_pasos)
     dt = t[1] - t[0]
     y = np.zeros(n_pasos)
@@ -80,9 +80,9 @@ def resolver_rk4(s0, lambda_base, temp_amb, props, t_max=30, n_pasos=300):
         if y[i+1] < 0: y[i+1] = 0.0
     return t, y
 
-def resolver_scipy(s0, lambda_base, temp_amb, props, t_max=30, n_pasos=300):
+def resolver_scipy(s0, lambda_base, temp_amb, props, t_max=30, n_puntos=300):
     """Método Adaptativo Dormand-Prince (Runge-Kutta 4(5)) vía SciPy."""
-    t_eval = np.linspace(0, t_max, n_pasos)
+    t_eval = np.linspace(0, t_max, n_puntos)
     if not props["perecedero"]:
         return t_eval, np.full_like(t_eval, s0)
         
@@ -93,15 +93,15 @@ def resolver_scipy(s0, lambda_base, temp_amb, props, t_max=30, n_pasos=300):
     return sol.t, sol.y[0]
 
 # Función envoltorio principal (para importar limpiamente)
-def resolver_modelo_continuo(nombre_producto, s0, lambda_base, temp_amb, t_max=30, metodo="Runge-Kutta 4 (RK4)"):
+def resolver_modelo_continuo(nombre_producto, s0, lambda_base, temp_amb, t_max=30, metodo="Runge-Kutta 4 (RK4)", n_pasos=300):
     props = PRODUCTOS_PERECEDEROS.get(nombre_producto, PRODUCTOS_PERECEDEROS["Carne"])
     
     if metodo == "Euler Explícito":
-        return resolver_euler(s0, lambda_base, temp_amb, props, t_max)
+        return resolver_euler(s0, lambda_base, temp_amb, props, t_max, n_pasos)
     elif metodo == "Runge-Kutta 4 (RK4)":
-        return resolver_rk4(s0, lambda_base, temp_amb, props, t_max)
+        return resolver_rk4(s0, lambda_base, temp_amb, props, t_max, n_pasos)
     else:
-        return resolver_scipy(s0, lambda_base, temp_amb, props, t_max)
+        return resolver_scipy(s0, lambda_base, temp_amb, props, t_max, n_pasos)
 
 
 # ==========================================
@@ -114,12 +114,11 @@ if __name__ == "__main__" or "streamlit" in __name__:
         pass
 
     st.title("📦 Módulo 3: EDOs y Simulación Continua con Métodos Numéricos")
-    st.markdown("Comparativa de algoritmos de aproximación para la degradación de productos perecederos.")
+    st.markdown("Comparativa de algoritmos de aproximación y control de discretización para perecederos.")
 
-    st.sidebar.header("⚙️ Configuración")
+    st.sidebar.header("⚙️ Configuración del Modelo")
     prod_key = st.sidebar.selectbox("Seleccione el Producto", list(PRODUCTOS_PERECEDEROS.keys()))
     
-    # Selector clave pedido por ti
     metodo_num = st.sidebar.selectbox(
         "Método de Aproximación Numérica",
         ["Runge-Kutta 4 (RK4)", "Euler Explícito", "SciPy (RK45 Adaptativo)"]
@@ -128,12 +127,21 @@ if __name__ == "__main__" or "streamlit" in __name__:
     p_info = PRODUCTOS_PERECEDEROS[prod_key]
     
     t_max = st.sidebar.slider("Días de simulación ($t_{max}$)", 5, 60, 30, 5)
+    
+    # Control dinámico de pasos (solo se activa de forma útil para Euler y RK4 manual)
+    if metodo_num != "SciPy (RK45 Adaptativo)":
+        n_pasos = st.sidebar.slider("Número de Pasos / Discretización ($N$)", min_value=10, max_value=1000, value=150, step=10,
+                                     help="Menos pasos = mayor error de truncamiento. Más pasos = mayor precisión.")
+    else:
+        n_pasos = 300
+        st.sidebar.info("ℹ️ SciPy gestiona el paso de forma adaptativa automática.")
+
     s0 = st.sidebar.number_input(f"Inventario Inicial S(0) para {prod_key}", 10.0, 5000.0, p_info["s0_default"], 50.0)
     lambda_0 = st.sidebar.number_input(r"Tasa base de degradación ($\lambda_0$)", 0.0, 0.1, p_info["lambda_0"], 0.001, format="%.3f")
     temp_amb = st.sidebar.slider("Temperatura ambiental del almacén (°C)", 0.0, 40.0, 18.0, 0.5)
 
-    # Ejecutar cálculo seleccionando el método
-    t_vals, s_vals = resolver_modelo_continuo(prod_key, s0, lambda_0, temp_amb, t_max, metodo_num)
+    # Ejecutar cálculo pasando el número de pasos
+    t_vals, s_vals = resolver_modelo_continuo(prod_key, s0, lambda_0, temp_amb, t_max, metodo_num, n_pasos)
 
     # Métricas en pantalla
     col1, col2, col3, col4 = st.columns(4)
@@ -145,14 +153,15 @@ if __name__ == "__main__" or "streamlit" in __name__:
 
     st.markdown("---")
 
-    # Gráfica Plotly destacando el método
+    # Gráfica Plotly
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=t_vals, y=s_vals, mode='lines', name=f'{prod_key} ({metodo_num})',
+        x=t_vals, y=s_vals, mode='lines+markers' if n_pasos < 40 else 'lines', 
+        name=f'{prod_key} ({metodo_num})',
         line=dict(color='#00d4b6' if not p_info["perecedero"] else '#ffa15a', width=3)
     ))
     fig.update_layout(
-        title=f"Evolución del Inventario usando {metodo_num}",
+        title=f"Evolución del Inventario - {metodo_num} (N = {n_pasos} pasos)",
         xaxis_title="Tiempo (Días)",
         yaxis_title="Unidades Físicas Disponibles",
         template="plotly_dark",
