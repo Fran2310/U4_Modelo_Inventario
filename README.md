@@ -1,227 +1,171 @@
-# 🛒 Simulador de Inventario para Supermercado
-**Materia:** DCM-902 — Diseño y Control de Modelos  
-**Proyecto:** Simulador Dinámico e Interactivo de Gestión de Inventarios  
-**Entorno de Ejecución:** Python 3.10+ | Streamlit | Pandas  
+# 🛒 Simulador Integral de Inventario para Supermercado
 
----
+**Materia:** DCM-902 — Diseño y Control de Modelos
+
+**Proyecto:** Simulador Dinámico e Interactivo de Gestión, Simulación y Optimización de Inventarios
+
+**Entorno de Ejecución:** Python 3.10+ | Streamlit | Pandas | NumPy | SciPy | Plotly
 
 ## 📖 Descripción General del Proyecto
 
-Este proyecto consiste en el diseño, implementación y evaluación de un **Simulador Interactivo de Inventario** enfocado en el canal supermercadista. Su objetivo es modelar el comportamiento del inventario para categorías de productos representativas mediante un enfoque gradual que abarca desde la administración básica de existencias hasta la simulación estocástica y la optimización de políticas de reorden.
-
-La aplicación permite analizar el impacto económico de los niveles de existencias, evaluar la función de costo total operativo y prevenir roturas de stock mediante indicadores analíticos en tiempo real.
-
----
+Este proyecto implementa un **Simulador Interactivo de Inventario** para el canal supermercadista que unifica cuatro etapas de modelado matemático y computacional en una sola aplicación web (`main.py`). Permite gestionar existencias en tiempo real, proyectar la demanda estocástica bajo distintas políticas de reposición, resolver ecuaciones diferenciales ordinarias (EDO) de degradación térmica y ejecutar experimentos de optimización, validación Monte Carlo y análisis de sensibilidad con visualizaciones interactivas integradas.
 
 ## 🧱 Arquitectura Integral del Sistema (4 Módulos)
 
-El proyecto se encuentra modularizado en 4 etapas analíticas e ingenieriles diseñadas para completarse de forma colaborativa:
+Los 4 módulos están implementados e integrados dentro de `main.py` mediante pestañas (`st.tabs`), manteniendo la capacidad de ejecutarse también de forma independiente para pruebas unitarias:
 
 ```
 U4_Modelo_Inventario/
 │
-├── main.py                  # [Módulo 1] Core de Inventario, UI Dashboard y Costos Estáticos
-├── simulacion_discreta.py   # [Módulo 2] Simulación de demanda por eventos estocásticos (Monte Carlo)
-├── modelo_continuo.py       # [Módulo 3] Modelado continuo de mermas y degradación (EDO)
-├── control_optimo.py        # [Módulo 4] Algoritmos de control y políticas de reorden óptimo (s, S / EOQ)
-├── requirements.txt         # Dependencias del proyecto
-└── README.md                # Documentación técnica y académica
+├── main.py                  # [Módulo 1 + App Integrada] Core CRUD, Dashboard y 4 Pestañas Interactivas
+├── simulacion_discreta.py   # [Módulo 2] Simulación discreta día a día, políticas (s, Q) vs (R, S) y merma híbrida
+├── modelo_continuo.py       # [Módulo 3] Modelado continuo de degradación de perecederos (EDO: Euler, RK4, SciPy)
+├── control_optimo.py        # [Módulo 4] Modelo EOQ, optimización restringida, heatmaps, Monte Carlo y sensibilidad
+├── requirements.txt         # Dependencias completas del proyecto
+└── README.md                # Documentación técnica, resultados experimentales y conclusiones
+
 ```
 
----
+## 🧩 Detalle por Módulos y Visualizaciones Integradas
 
-### Detalle por Módulos y Estado de Desarrollo
+### 🟢 Módulo 1: Core de Inventario, Costos Estáticos y Dashboard (`main.py`)
 
-### 🟢 Módulo 1: Core de Inventario y Modelo Estático (Implementado)
-* **Archivo:** `main.py`
-* **Responsabilidades:**
-  - **Gestión de Estado Centralizada:** Persistencia del inventario durante la sesión interactiva con `st.session_state`.
-  - **Catálogo Base de Productos:** Monitoreo de 4 categorías clave (`Carne`, `Lácteos`, `Granos`, `Higiene`) con atributos económicos (`Precio Venta`, `Costo Compra`, `Margen Unitario`, `Costo Almacenamiento`, `Stock Actual`, `Stock Mínimo`).
-  - **Operaciones CRUD:** Entradas (abastecimiento) y salidas (despacho/ventas) manuales desde la barra lateral con control estricto de no-negatividad.
-  - **Modelo Estático de Costos (Lucro Cesante):** Evaluación instantánea de los costos del sistema:
-    $$\text{Costo Total} = \text{Costo de Compra} + \text{Costo de Almacenamiento} + \text{Lucro Cesante}$$
-    - **Costo de Compra:** $\sum (\text{Costo Compra} \times \text{Stock Actual})$
-    - **Costo de Almacenamiento:** $\sum (\text{Costo Almacenamiento} \times \text{Stock Actual})$
-    - **Lucro Cesante (Faltantes):** Penalización dinámica equivalente al margen de ganancia perdido por demanda insatisfecha estimada sobre el stock mínimo:
-      $$\text{Lucro Cesante} = \sum_{\text{Stock}=0} (\text{Margen Unitario} \times \text{Stock Mínimo})$$
-  - **Dashboard de Monitoreo:** Métricas ejecutivas (KPIs), panel superior de alertas tempranas y tabla interactiva a ancho completo con fila consolidada de **TOTALES** (Stock total y Valor comercial agregado).
+* **Gestión de Estado Centralizada:** Persistencia del catálogo en `st.session_state["inventario_df"]` para las 4 categorías base (`Carne`, `Lácteos`, `Granos`, `Higiene`), sincronizado con todas las pestañas de simulación.
 
----
+* **Operaciones CRUD:** Entradas y salidas manuales desde la barra lateral con validación estricta de no-negatividad y reinicio rápido del estado base.
 
-### ⏳ Módulo 2: Simulación de Eventos Discretos y Demanda Estocástica (Próximo)
-* **Archivo objetivo:** `simulacion_discreta.py`
-* **Alcance:**
-  📘 Explicación del Módulo 2 — Simulación Discreta y Políticas de Reposición
-El Módulo 2 es el corazón analítico del sistema: toma el inventario que gestionas manualmente (Módulo 1) y lo proyecta 30 días en el futuro simulando cómo evolucionaría bajo demanda incierta y distintas reglas de reposición.
+* **Modelo Estático de Costos (Lucro Cesante):** 
 
-🎯 ¿Qué hace exactamente?
-Simula día a día lo que ocurre en el almacén durante 30 jornadas, respondiendo preguntas como:
-- **¿Cuántas unidades tendré mañana si la demanda es alta?**
-- **¿Cuándo debo hacer un pedido y cuánto?**
-- **¿Qué pasa si la temperatura sube y daña la mercancía?**
-- **¿Qué política de reposición me cuesta menos dinero?**
+  $$
+  \text{Costo Total} = \text{Costo de Compra} + \text{Costo de Almacenamiento} + \text{Lucro Cesante}
+  $$
 
-⚙️ Los 5 subprocesos que ocurren en cada día simulado
-Dentro del bucle for dia in range(1, dias+1) de la función simular(), en cada iteración se ejecuta esta secuencia:
+   donde el Lucro Cesante se activa para productos agotados ($\text{Stock}=0$) como $\sum (\text{Margen Unitario} \times \text{Stock Mínimo})$.
 
-**#	Subproceso	Qué simula**
+* **Visualizaciones Integradas (Pestaña 1):** Tarjetas KPI, alertas automáticas de stock bajo/agotado, gráfico de barras de **Stock Actual vs. Stock Mínimo** (con código de color por estado), gráfico circular de **Distribución del Valor Comercial** y tabla consolidada con fila de **TOTALES**.
 
-**- 1	Llegada de pedidos**: Si un pedido hecho días atrás ya cumplió su lead time, entra al stock físico.
+### 🟢 Módulo 2: Simulación Discreta y Políticas de Reposición (`simulacion_discreta.py`)
 
-**- 2	Demanda aleatoria**: Se genera la demanda del día con una distribución normal N(μ, σ) → representa clientes que llegan de forma impredecible.
+* **Motor Secuencial de Intervalos:** Simula día a día la llegada de pedidos en tránsito (respetando el *lead time*), demanda normal estocástica $N(\mu, \sigma)$, ventas, faltantes, ciclo térmico $T(t) = T_{\text{base}} + A \cdot \sin(2\pi t / 30)$, merma híbrida cuando $T(t) > T_{\text{umbral}}$ y reposición basada en **posición de inventario** ($\text{stock físico} + \text{en tránsito}$).
 
-**- 3	Ventas y faltantes**: Si hay stock suficiente se vende todo; si no, lo no satisfecho se registra como faltante (venta perdida).
+* **Políticas Evaluadas:** Revisión continua $(s, Q)$ y revisión periódica $(R, S)$.
 
-**- 4	Temperatura + merma**: Se calcula T(t) = base + A·sin(2π·t/30) y, si supera el umbral, se descuenta un % del stock como merma (modelo híbrido).
+* **Visualizaciones Integradas (Pestaña 2):** Evolución comparativa del stock diario con líneas de quiebre y stock mínimo, gráfico combinado de **Temperatura Dinámica y Merma Diaria**, gráfico de barras de **Desglose Comparativo de Costos** (Compra, Almacenamiento, Lucro Cesante y Merma) y tabla de detalle diario.
 
-**- 5	Decisión de pedido**: Se evalúa la política activa para decidir si se hace un pedido hoy y cuánto.
+### 🟢 Módulo 3: Modelos Continuos y Dinámica de Perecederos (`modelo_continuo.py`)
 
-**🔄 Las dos políticas de reposición implementadas**
+* **Formulación EDO:** Modela la degradación continua dependiente de la temperatura ambiental:
+  
 
-📦 Política (s, Q) — Revisión Continua
-Regla: "Si la posición de inventario cae por debajo de s, pido Q unidades fijas."
+  $$
+  \frac{dS}{dt} = -\lambda_0 \cdot e^{\alpha \cdot \max(0,\, T_{\text{amb}} - T_{\text{ópt}})} \cdot S(t)
+  $$
 
-Cómo se comporta: pedidos frecuentes y de tamaño constante. Mantiene el stock más "estable".
+* **Métodos Numéricos:** Implementación comparativa de **Euler Explícito**, **Runge-Kutta de 4to Orden (RK4)** y **SciPy RK45 adaptativo**, contrastados frente a la solución analítica exacta para cuantificar el error de truncamiento (Error Máximo y MAE).
 
-Ejemplo: si s=20 y Q=50, cada vez que el inventario toque 20, se piden 50.
+* **Visualizaciones Integradas (Pestaña 3):** Superposición interactiva de los tres integradores numéricos, curvas de **Sensibilidad Térmica** ($4\,^\circ\text{C}$ a $32\,^\circ\text{C}$) y tabla de precisión numérica.
 
-📦 Política (R, S) — Revisión Periódica
-Regla: "Cada R días reviso y pido lo necesario para llegar a S."
+### 🟢 Módulo 4: Experimentación, Control Óptimo y Análisis de Sensibilidad (`control_optimo.py`)
 
-Cómo se comporta: pedidos agrupados (menos frecuentes) pero de tamaño variable. Reduce costos de compra pero puede generar más faltantes si R es grande.
+* **Modelo Analítico EOQ y Stock de Seguridad:** Calcula el lote económico $Q^* = \sqrt{\frac{2DK}{H}}$, el stock de seguridad $SS = z \cdot \sigma \cdot \sqrt{L}$ y el punto de reorden $ROP = \mu L + SS$.
 
-Ejemplo: si R=5 y S=150, cada 5 días se pide lo que falte para tener 150 unidades.
+* **Optimización por Barrido Restringido (Grid Search):** Evalúa mallas de $(s, Q)$ y $(R, S)$ imponiendo una restricción configurable de **Nivel de Servicio Mínimo** (por defecto $\ge 95\%$) para evitar soluciones degeneradas que minimizan compras a costa de desabastecer el supermercado.
 
-- 🔑 Clave técnica: posición de inventario
-Ambas políticas usan posicion = stock + pedidos_en_tránsito (no solo el stock físico). Esto evita pedidos duplicados mientras el pedido anterior aún está en camino por el lead time.
+* **Validación Monte Carlo y Sensibilidad:** Ejecuta $N$ réplicas estocásticas independientes para medir media y desviación de costos, y analiza la respuesta del sistema ante variaciones de *Lead Time*, Temperatura Base y Volatilidad de Demanda ($\sigma$).
 
-- 🌡️ Los dos modelos especiales que se combinan
-**Modelo dinámico continuo — Temperatura**
-text
-T(t) = 20 + 8·sin(2π·t/30)
-Simula un ciclo térmico (día caluroso → fresco → caluroso) sin saltos bruscos, como ocurre en un almacén real. Se grafica superpuesto con el stock para ver el efecto.
+* **Visualizaciones Integradas (Pestaña 4):**
 
-**Modelo híbrido — Merma por calor**
-Cuando T(t) > umbral (26°C), el sistema pierde un porcentaje del stock disponible:
+  * Curva de compensación (**Trade-Off EOQ**) entre costo de ordenar y almacenar.
 
-**text**
-if T > umbral: merma = stock × tasa (ej. 3%)
-Esto acopla la variable continua (temperatura) con el inventario discreto, cumpliendo el requisito del enunciado.
+  * **Mapas de calor (Heatmaps)** de costo total para las mallas $(s, Q)$ y $(R, S)$ con marcador del óptimo factible.
 
-**💰 ¿Qué obtiene el usuario al final?**
-Tabla diaria de 30 filas con: demanda, ventas, faltantes, temperatura, merma, pedido, stock final.
+  * Histogramas superpuestos de **distribución de costos Monte Carlo**.
 
-Gráfico comparativo de stock entre política (s,Q) y (R,S), con línea de stock mínimo y quiebre.
+  * Tres curvas de **análisis de sensibilidad** (*Lead Time*, Temperatura, Volatilidad).
 
-Gráfico de temperatura mostrando cuándo se activó la merma.
+  * **Comparativa global** de políticas óptimas para los 4 productos del supermercado.
 
-Tabla de costos desglosada por política:
+## 📊 Resultados Experimentales
 
-Costo de Compra = Σ pedidos × costo unitario
+Los siguientes resultados fueron obtenidos ejecutando el motor integrado sobre el catálogo base con un horizonte de **30 días**, *lead time* $L = 3$ días, costo fijo por orden $K = \$25$, ciclo térmico $T_{\text{base}} = 20\,^\circ\text{C}$, $A = 8\,^\circ\text{C}$, umbral $26\,^\circ\text{C}$, merma de $3\%$ y restricción de nivel de servicio $\ge 95\%$:
 
-Costo de Almacenamiento = stock promedio × costo diario × días
+### 1. Comparativa Global de Optimización por Producto
 
-Lucro Cesante = Σ faltantes × margen unitario
+| Producto | Demanda ($\mu \pm \sigma$) | EOQ ($Q^*$) | ROP Analítico | Óptimo $(s, Q)$ | Costo $(s, Q)$ | Servicio $(s, Q)$ | Óptimo $(R, S)$ | Costo $(R, S)$ | Servicio $(R, S)$ | Mejor Política | Ahorro | 
+| ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | 
+| **Carne** | 12 ± 3 | 30 | 45 | s=40, Q=30 | \$3,613.40 | 100.0% | R=3, S=80 | \$3,872.35 | 96.7% | **(s, Q)** | \$258.95 | 
+| **Lácteos** | 22 ± 5 | 61 | 80 | s=60, Q=30 | \$2,026.80 | 96.2% | R=1, S=80 | \$2,077.20 | 100.0% | **(s, Q)** | \$50.40 | 
+| **Granos** | 35 ± 7 | 148 | 125 | s=100, Q=65 | \$1,309.34 | 98.2% | R=1, S=120 | \$1,248.56 | 100.0% | **(R, S)** | \$60.78 | 
+| **Higiene** | 18 ± 4 | 77 | 65 | s=60, Q=30 | \$1,870.25 | 100.0% | R=1, S=80 | \$1,925.05 | 100.0% | **(s, Q)** | \$54.80 | 
 
-Pérdida por Merma = Σ mermas × costo unitario
+### 2. Robustez Estadística Monte Carlo (50 Réplicas — Carne)
 
-Recomendación automática: la política con menor costo total.
+| Política Evaluada | Costo Total Medio (\$) | Desviación Estándar (\$) | Nivel de Servicio Promedio (%) | 
+| ----- | ----- | ----- | ----- | 
+| $(s, Q)$ **Óptima** (`s=40, Q=30`) | **\$3,458.03** | ±\$132.92 | **99.80%** | 
+| $(R, S)$ **Óptima** (`R=3, S=80`) | \$3,840.12 | ±\$102.73 | 96.16% | 
 
-- **🔬 Submódulo de Optimización** Barre automáticamente combinaciones de (s, Q) y (R, S) (varias decenas) y ordena los resultados por costo total, identificando la configuración óptima para ese producto y contexto.
+### 3. Precisión Numérica y Sensibilidad Térmica del Modelo Continuo (EDO, 30 días)
 
-**📊 En una frase** El Módulo 2 convierte el inventario estático en una película de 30 días, donde la demanda, la temperatura y la política de pedidos interactúan para producir costos, faltantes y mermas medibles — permitiéndote decidir con evidencia qué política conviene al negocio.
+Comparativa de error frente a la solución analítica exacta para `Carne` a $18\,^\circ\text{C}$ con discretización gruesa ($N = 30$ pasos):
 
+| Método Numérico | Stock Final (unid) | Merma Total (unid) | Error Máx vs. Exacta | MAE vs. Exacta | 
+| ----- | ----- | ----- | ----- | ----- | 
+| **Euler Explícito** | 1.523 | 798.477 | 31.18984 | 13.53069 | 
+| **Runge-Kutta 4 (RK4)** | 2.860 | 797.140 | 0.00411 | 0.00187 | 
+| **SciPy (RK45 Adaptativo)** | 2.860 | 797.140 | 0.00000 | 0.00000 | 
 
+Impacto de la temperatura ambiental en la merma acumulada a 30 días (sin reposición, RK4):
 
----
+| Producto | $4\,^\circ\text{C}$ | $12\,^\circ\text{C}$ | $18\,^\circ\text{C}$ | $25\,^\circ\text{C}$ | 
+| ----- | ----- | ----- | ----- | ----- | 
+| **Carne** ($S_0 = 800$) | 65.0% merma (280.0 unid) | 93.6% merma (51.5 unid) | 99.6% merma (2.9 unid) | 100.0% merma (0.0 unid) | 
+| **Lácteos** ($S_0 = 1200$) | 45.1% merma (658.6 unid) | 64.3% merma (428.6 unid) | 82.9% merma (205.1 unid) | 96.4% merma (43.5 unid) | 
 
-### ⏳ Módulo 3: Modelos Continuos y Dinámica de Perecederos (Próximo)
-* **Archivo objetivo:** `modelo_continuo.py`
-* **Alcance:**
-  - Formulación de **Ecuaciones Diferenciales Ordinarias (EDO)** para modelar la tasa de merma o degradación física de productos perecederos (particularmente `Carne` y `Lácteos`):
-    $$\frac{dQ(t)}{dt} = - \lambda(T_{amb}) \cdot Q(t) - D(t)$$
-    donde $\lambda(T_{amb})$ representa el factor de merma según condiciones térmicas y $D(t)$ la tasa continua de salida.
-  - Integración numérica utilizando esquemas explícitos (Runge-Kutta / Euler) o la librería `scipy.integrate.solve_ivp`.
+## 🧠 Conclusiones
 
----
+1. **Superioridad de la revisión continua** $(s, Q)$ **en productos perecederos y de alto costo de almacenamiento:** Para `Carne`, `Lácteos` e `Higiene`, la política $(s, Q)$ superó a la revisión periódica $(R, S)$ manteniendo niveles de servicio superiores al 96% y logrando un ahorro de hasta **\$258.95** en `Carne` (y **\$382.09** en promedio a lo largo de 50 réplicas Monte Carlo, con 99.80% de servicio). En cambio, para `Granos` (alta rotación y bajo costo de almacenamiento de \$0.08/unidad), la revisión periódica $(R, S)$ con ciclos cortos resultó **\$60.78** más económica.
 
-### ⏳ Módulo 4: Políticas de Control y Optimización de Inventarios (Próximo)
-* **Archivo objetivo:** `control_optimo.py`
-* **Alcance:**
-  - Implementación de políticas de inventario estocásticas tipo $(s, S)$ o $(r, Q)$ con tiempo de entrega (Lead Time $L$).
-  - Determinación del lote económico de compra (**EOQ**) y punto de reorden óptimo equilibrando el costo de ordenar ($K$), costo de almacenamiento ($h$) y penalización por rotura ($p$).
-  - Curvas de compensación (Trade-off) y análisis de sensibilidad de parámetros.
+2. **Necesidad crítica de restricciones de nivel de servicio en la optimización:** Al incluir el costo de compra en la función objetivo sin ingresos por ventas, una optimización sin restricciones tiende a soluciones degeneradas (reducir pedidos y tolerar roturas masivas porque el costo de compra supera al margen unitario). Incorporar la restricción de **nivel de servicio** $\ge 95\%$ permitió alinear los parámetros simulados (`s=40, Q=30` en Carne) con los valores teóricos del modelo **EOQ/ROP** ($Q^*=30$, $ROP=45$).
 
----
+3. **Impacto exponencial de la cadena de frío en el inventario:** Tanto el modelo híbrido discreto como la EDO continua demuestran que superar la temperatura óptima dispara las pérdidas: en el modelo discreto de `Carne`, elevar la temperatura base de $18\,^\circ\text{C}$ a $30\,^\circ\text{C}$ incrementó el costo en casi 10% bajo $(s, Q)$ y elevó la merma de 0 a 12 unidades (16 unidades en $(R, S)$ por mantener picos mayores de stock). En el modelo continuo, perder la refrigeración ($4\,^\circ\text{C} \to 18\,^\circ\text{C}$) eleva la degradación de `Carne` del 65.0% al 99.6% en 30 días.
 
-## 🔌 Guía de Integración y Contratos de Datos (Para el Equipo)
+4. **Confiabilidad de los métodos numéricos de orden superior:** Con discretizaciones bajas ($N=30$), el método de Euler Explícito introduce errores máximos superiores a **31 unidades**, mientras que **Runge-Kutta 4 (RK4)** reduce el error a **0.0041 unidades** (más de 7,500 veces más preciso) con el mismo costo computacional de pasos, igualando prácticamente la solución adaptativa de SciPy RK45.
 
-Para facilitar la integración modular por parte de los compañeros de equipo, el Core expone los siguientes puntos de enlace:
+5. **Valor de la integración visual para la toma de decisiones:** Consolidar el estado CRUD, las trayectorias estocásticas, las curvas de degradación EDO, los mapas de calor y las pruebas de sensibilidad en una única interfaz interactiva permite diagnosticar de inmediato el compromiso (*trade-off*) entre costo de almacenamiento, riesgo de quiebre y merma térmica.
 
-### 1. Estado Global del Inventario (`st.session_state`)
-El DataFrame está disponible globalmente bajo la clave:
-```python
-import streamlit as st
+## 🔌 Contratos de Integración
 
-df_actual = st.session_state["inventario_df"]
-```
+* **Estado global:** `st.session_state["inventario_df"]` compartido por los 4 módulos.
 
-**Estructura de Columnas en `st.session_state`:**
-| Columna | Tipo de Dato | Descripción |
-| :--- | :---: | :--- |
-| `Producto` | `str` | Nombre o categoría del artículo |
-| `Precio Venta ($)` | `float` | Precio unitario al público |
-| `Costo Compra ($)` | `float` | Costo unitario de adquisición |
-| `Margen Unitario ($)` | `float` | Margen de ganancia (`Precio Venta - Costo Compra`) |
-| `Costo Almacenamiento ($/unidad)` | `float` | Tarifa de mantenimiento/refrigeración |
-| `Stock Actual` | `int` | Existencia física disponible |
-| `Stock Mínimo` | `int` | Punto de seguridad o reorden base |
+* **Funciones puras reutilizables:**
 
-### 2. Calculadora de Costos (`calcular_costos_estaticos`)
-La función de costos es pura (no tiene efectos secundarios), lo que permite utilizarla tanto en la interfaz como en algoritmos de optimización:
-```python
-from main import calcular_costos_estaticos
+  * `main.calcular_costos_estaticos(df)`
 
-costo_compra, costo_almacen, costo_faltantes = calcular_costos_estaticos(df)
-```
+  * `simulacion_discreta.simular(...)` y `simulacion_discreta.costos_simulacion(...)`
 
-### 3. Inyección de Módulos Futuros en la Interfaz
-En las próximas entregas, los módulos de simulación pueden conectarse en la barra lateral o en pestañas (`st.tabs`):
-```python
-# Ejemplo de integración futura para Módulo 2 y Módulo 3:
-tab_dashboard, tab_simulacion, tab_control = st.tabs([
-    "📊 Monitoreo Actual",
-    "🎲 Simulación Estocástica",
-    "⚙️ Políticas de Control"
-])
-```
+  * `modelo_continuo.resolver_modelo_continuo(...)` y `modelo_continuo.comparar_metodos_numericos(...)`
 
----
+  * `control_optimo.calcular_eoq(...)`, `control_optimo.barrido_parametros(...)` y `control_optimo.simulacion_monte_carlo(...)`
 
 ## 🚀 Instalación y Puesta en Marcha
 
 ### Prerrequisitos
-Tener instalado Python 3.10 o superior y el gestor de paquetes `pip`.
 
-### 1. Clonar o abrir el directorio del proyecto
-```bash
-cd "c:\Users\User\Documents\UMC\UMC files\2026-01\3. DCM-902 Diseño de Control y Modelos\U4_Modelo_Inventario"
+Python 3.10 o superior y `pip`.
+
+### 1. Instalar las dependencias
+
 ```
-
-### 2. Instalar las dependencias requeridas
-```bash
 pip install -r requirements.txt
+
 ```
 
-### 3. Ejecutar la aplicación
-```bash
+### 2. Ejecutar la aplicación integrada
+
+```
 streamlit run main.py
+
 ```
-La aplicación se desplegará localmente en `http://localhost:8501`.
 
----
-
-## 👥 Colaboración y Buenas Prácticas
-- **Estilo de Código:** Cumplimiento de **PEP 8** y tipado estático con `typing`.
-- **Inmutabilidad en cálculos:** Mantener las funciones de modelado como funciones puras para facilitar pruebas unitarias.
-- **Validaciones:** Comprobar siempre que las salidas de stock no generen existencias negativas.
+La aplicación abrirá en `http://localhost:8501` con las 4 pestañas integradas. Cada módulo también puede ejecutarse de manera individual (`streamlit run simulacion_discreta.py`, `streamlit run modelo_continuo.py` o `streamlit run control_optimo.py`).
