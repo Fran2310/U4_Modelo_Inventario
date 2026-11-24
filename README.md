@@ -29,7 +29,7 @@ U4_Modelo_Inventario/
 ## 🧩 Detalle por Módulos y Visualizaciones Integradas
 
 ### 🟢 Módulo 1: Core de Inventario, Costos Estáticos y Dashboard (`main.py`)
-
+#### Encargado: Francisco Ramos
 * **Gestión de Estado Centralizada:** Persistencia del catálogo en `st.session_state["inventario_df"]` para las 4 categorías base (`Carne`, `Lácteos`, `Granos`, `Higiene`), sincronizado con todas las pestañas de simulación.
 
 * **Operaciones CRUD:** Entradas y salidas manuales desde la barra lateral con validación estricta de no-negatividad y reinicio rápido del estado base.
@@ -45,6 +45,7 @@ U4_Modelo_Inventario/
 * **Visualizaciones Integradas (Pestaña 1):** Tarjetas KPI, alertas automáticas de stock bajo/agotado, gráfico de barras de **Stock Actual vs. Stock Mínimo** (con código de color por estado), gráfico circular de **Distribución del Valor Comercial** y tabla consolidada con fila de **TOTALES**.
 
 ### 🟢 Módulo 2: Simulación Discreta y Políticas de Reposición (`simulacion_discreta.py`)
+#### Encargado: Kathryn Aguilar
 
 * **Motor Secuencial de Intervalos:** Simula día a día la llegada de pedidos en tránsito (respetando el *lead time*), demanda normal estocástica $N(\mu, \sigma)$, ventas, faltantes, ciclo térmico $T(t) = T_{\text{base}} + A \cdot \sin(2\pi t / 30)$, merma híbrida cuando $T(t) > T_{\text{umbral}}$ y reposición basada en **posición de inventario** ($\text{stock físico} + \text{en tránsito}$).
 
@@ -53,6 +54,7 @@ U4_Modelo_Inventario/
 * **Visualizaciones Integradas (Pestaña 2):** Evolución comparativa del stock diario con líneas de quiebre y stock mínimo, gráfico combinado de **Temperatura Dinámica y Merma Diaria**, gráfico de barras de **Desglose Comparativo de Costos** (Compra, Almacenamiento, Lucro Cesante y Merma) y tabla de detalle diario.
 
 ### 🟢 Módulo 3: Modelos Continuos y Dinámica de Perecederos (`modelo_continuo.py`)
+#### Encargado: Miguel Bracho
 
 * **Formulación EDO:** Modela la degradación continua dependiente de la temperatura ambiental:
   
@@ -66,6 +68,7 @@ U4_Modelo_Inventario/
 * **Visualizaciones Integradas (Pestaña 3):** Superposición interactiva de los tres integradores numéricos, curvas de **Sensibilidad Térmica** ($4\,^\circ\text{C}$ a $32\,^\circ\text{C}$) y tabla de precisión numérica.
 
 ### 🟢 Módulo 4: Experimentación, Control Óptimo y Análisis de Sensibilidad (`control_optimo.py`)
+####Encargado: Jesus Ramirez
 
 * **Modelo Analítico EOQ y Stock de Seguridad:** Calcula el lote económico $Q^* = \sqrt{\frac{2DK}{H}}$, el stock de seguridad $SS = z \cdot \sigma \cdot \sqrt{L}$ y el punto de reorden $ROP = \mu L + SS$.
 
