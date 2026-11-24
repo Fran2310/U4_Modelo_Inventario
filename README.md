@@ -68,7 +68,7 @@ U4_Modelo_Inventario/
 * **Visualizaciones Integradas (Pestaña 3):** Superposición interactiva de los tres integradores numéricos, curvas de **Sensibilidad Térmica** ($4\,^\circ\text{C}$ a $32\,^\circ\text{C}$) y tabla de precisión numérica.
 
 ### 🟢 Módulo 4: Experimentación, Control Óptimo y Análisis de Sensibilidad (`control_optimo.py`)
-####Encargado: Jesus Ramirez
+#### Encargado: Jesus Ramirez
 
 * **Modelo Analítico EOQ y Stock de Seguridad:** Calcula el lote económico $Q^* = \sqrt{\frac{2DK}{H}}$, el stock de seguridad $SS = z \cdot \sigma \cdot \sqrt{L}$ y el punto de reorden $ROP = \mu L + SS$.
 
